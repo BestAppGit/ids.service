@@ -15,9 +15,9 @@ Apesar de complexo no começo, após a adaptação, suas regras são mais simpli
 
 Trabalhamos com 3 arquivos principais, onde:
 
-ids.py - O script IDS em si
-nftables.conf - Configurações necessárias para o nftables
-ids.service - Cria um serviço para o script, permitindo sua execução constante
+- ids.py - O script IDS em si
+- nftables.conf - Configurações necessárias para o nftables
+- ids.service - Cria um serviço para o script, permitindo sua execução constante
 
 
 ---
