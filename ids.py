@@ -24,16 +24,16 @@ log_pattern = "*access_log"
 
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
-regex_code_status = re.compile(r' (404|403|401|301) ')
-regex_wp_login = re.compile(r' /wp-login.php')
+regex_bots = re.compile(r'semrush|yandex|mj12bot|babbar.tech|ahrefs.com|DataForSeoBot|SmartReader Library|ClaudeBot|DotBot')
 regex_url = re.compile(r'//wp-admin')
-regex_bots = re.compile(r'semrush|yandex|mj12bot|babbar.tech|ahrefs.com|DataForSeoBot')
+regex_wp_login = re.compile(r' /wp-login.php|GPTBot')
+regex_code_status = re.compile(r' (404|403|401|301) |POST /wp-json/litespeed/v1/cdn_status HTTP/1.1')
 
 # Variáveis de configuração
-max_attempts_code_status = 30
-max_attempts_wp_login = 10
 max_attempts_bots = 3
-max_attempts_url = 5  # Número máximo de tentativas para a regex_url
+max_attempts_url = 3  # Número máximo de tentativas para a regex_url
+max_attempts_wp_login = 10
+max_attempts_code_status = 30
 time_window_seconds = 300  # 5 minutos de intervalo para contar tentativas
 
 # Conjunto de IPs já suspensos
@@ -64,7 +64,7 @@ def suspend_ip(ip, ban_set="ids_ban"):
 
 # Função para processar cada linha do log
 def process_line(line):
-    # Ignorar linhas que contêm "/g/collect" ou "/?gad_source"
+    # Ignorar linhas que contêm "/g/collect", "/?gad_source" ou "/assinaturas"
     if "/g/collect" in line or "/?gad_source" in line or "/assinaturas" in line:
         logging.debug(f"Ignorando linha com '/g/collect' ou '/?gad_source' ou '/assinaturas': {line.strip()}")
         return  # Ignorar esta linha
@@ -72,9 +72,27 @@ def process_line(line):
     ip_match = regex_ip.search(line)
     if ip_match:
         ip = ip_match.group(1)
+
+        # Contagem de tentativas para bots
+        if regex_bots.search(line):
+            with attempts_lock:
+                attempts_bots[ip] += 1
+                count = attempts_bots[ip]
+            logging.debug(f"IP {ip} identificado como bot {count} vezes.")
+            if count >= max_attempts_bots:
+                suspend_ip(ip, ban_set="bots_ban")
         
+        # Contagem de tentativas para /wp-admin
+        elif regex_url.search(line):
+            with attempts_lock:
+                attempts_url[ip] += 1
+                count = attempts_url[ip]
+            logging.debug(f"IP {ip} tentou acessar URLs deny {count} vezes.")
+            if count >= max_attempts_url:
+                suspend_ip(ip)
+
         # Contagem de tentativas para /wp-login.php
-        if regex_wp_login.search(line):
+        elif regex_wp_login.search(line):
             with attempts_lock:
                 attempts_wp_login[ip] += 1
                 count = attempts_wp_login[ip]
@@ -90,24 +108,6 @@ def process_line(line):
             logging.debug(f"IP {ip} gerou {count} erros 404/403/401/301.")
             if count >= max_attempts_code_status:
                 suspend_ip(ip)
-
-        # Contagem de tentativas para /wp-admin
-        elif regex_url.search(line):
-            with attempts_lock:
-                attempts_url[ip] += 1
-                count = attempts_url[ip]
-            logging.debug(f"IP {ip} tentou acessar URLs deny {count} vezes.")
-            if count >= max_attempts_url:
-                suspend_ip(ip)
-
-        # Contagem de tentativas para bots
-        elif regex_bots.search(line):
-            with attempts_lock:
-                attempts_bots[ip] += 1
-                count = attempts_bots[ip]
-            logging.debug(f"IP {ip} identificado como bot {count} vezes.")
-            if count >= max_attempts_bots:
-                suspend_ip(ip, ban_set="bots_ban")
 
 # Função para resetar as tentativas a cada intervalo definido
 def reset_attempts():
