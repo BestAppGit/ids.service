@@ -31,35 +31,38 @@ for log_file in os.listdir(log_dir):
 
             # Dividir a linha em partes
             parts = line.split(' ')
-            if len(parts) >= 9:  # Verifica se há partes suficientes
+            if len(parts) >= 11:  # Verifica se há partes suficientes
                 ip = parts[0]
                 url = parts[6]  # O caminho da URL geralmente está na posição 6
                 status = parts[8]  # O código de status geralmente está na posição 8
+                referer = parts[10].strip('\"')  # O referer geralmente está na posição 10
 
                 if should_ignore_url(url):
                     ignored_lines += 1
                     continue
 
-                patterns[(ip, url, status)] += 1
+                patterns[(ip, url, status, referer)] += 1
             else:
                 ignored_lines += 1
 
 # Preparar os dados para exibição
 results = []
-for (ip, url, status), count in patterns.items():
+for (ip, url, status, referer), count in patterns.items():
     score = calculate_score(count)
     # Truncar a URL se for muito longa
     truncated_url = truncate_url(url)
+    # Truncar o referer se for muito longo
+    truncated_referer = truncate_url(referer)
     # Adicionar resultado como string única com delimitadores
-    results.append(f"{ip:<15} {truncated_url:<60} {status:<5} {count:<10} {score:<10}")
+    results.append(f"{ip:<15} {truncated_url:<60} {status:<5} {count:<10} {score:<10} {truncated_referer:<60}")
 
 # Ordenar os padrões por quantidade de ocorrências (descendente)
 results.sort(key=lambda x: int(x.split()[3]), reverse=True)
 
 # Exibir resultados em uma única linha por padrão malicioso
 if results:
-    print(f"{'IP':<15} {'URL Truncada':<60} {'Status':<5} {'Qtd':<10} {'Pontuação':<10}")
-    print("=" * 85)  # Linha de separação
+    print(f"{'IP':<15} {'URL Truncada':<60} {'Status':<5} {'Qtd':<10} {'Pontuação':<10} {'Referer Truncado':<60}")
+    print("=" * 150)  # Linha de separação
     for result in results:
         print(result)
 else:
