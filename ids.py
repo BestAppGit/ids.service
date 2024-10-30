@@ -50,10 +50,10 @@ attempts_url = defaultdict(int)  # Dicionário para contar tentativas de acesso 
 attempts_lock = threading.Lock()
 
 # Função para adicionar IP ao conjunto 'ids_ban' do nftables
-def suspend_ip(ip, ban_set="ids_ban"):
+def suspend_ip(ip, ban_set="ids_ban", regex_used=""):
     with suspended_ips_lock:
         if ip not in suspended_ips:
-            logging.info(f"Suspending IP: {ip} in {ban_set}")
+            logging.info(f"Suspending IP: {ip} in {ban_set} - Regex: {regex_used}")
             try:
                 subprocess.run(
                     ["sudo", "nft", "add", "element", "ip", "filter", ban_set, f'{{ {ip} }}'],
@@ -75,40 +75,44 @@ def process_line(line):
         ip = ip_match.group(1)
 
         # Contagem de tentativas para bots
-        if regex_bots.search(line):
+        bot_match = regex_bots.search(line)
+        if bot_match:
             with attempts_lock:
                 attempts_bots[ip] += 1
                 count = attempts_bots[ip]
             logging.debug(f"IP {ip} identificado como bot {count} vezes.")
             if count >= max_attempts_bots:
-                suspend_ip(ip, ban_set="bots_ban")
-        
+                suspend_ip(ip, ban_set="bots_ban", regex_used=bot_match.group(0))
+
         # Contagem de tentativas para /wp-admin
         elif regex_url.search(line):
+            url_match = regex_url.search(line)
             with attempts_lock:
                 attempts_url[ip] += 1
                 count = attempts_url[ip]
             logging.debug(f"IP {ip} tentou acessar URLs deny {count} vezes.")
             if count >= max_attempts_url:
-                suspend_ip(ip)
+                suspend_ip(ip, regex_used=url_match.group(0))
 
         # Contagem de tentativas para /wp-login.php
         elif regex_wp_login.search(line):
+            wp_login_match = regex_wp_login.search(line)
             with attempts_lock:
                 attempts_wp_login[ip] += 1
                 count = attempts_wp_login[ip]
             logging.debug(f"IP {ip} tentou /wp-login.php {count} vezes.")
             if count >= max_attempts_wp_login:
-                suspend_ip(ip)
-        
+                suspend_ip(ip, regex_used=wp_login_match.group(0))
+
         # Contagem de tentativas para 404, 403, 401 e 301
         elif regex_code_status.search(line):
+            status_code_match = regex_code_status.search(line)
             with attempts_lock:
                 attempts_errors[ip] += 1
                 count = attempts_errors[ip]
             logging.debug(f"IP {ip} gerou {count} erros 404/403/401/301.")
             if count >= max_attempts_code_status:
-                suspend_ip(ip)
+                suspend_ip(ip, regex_used=status_code_match.group(0))
 
 # Função para resetar as tentativas a cada intervalo definido
 def reset_attempts():
