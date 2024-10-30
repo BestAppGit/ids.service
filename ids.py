@@ -10,13 +10,14 @@ import os
 
 # Configuração do logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO,  # Define o nível de log para INFO
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
     handlers=[
-        logging.FileHandler("log_monitoring.log"),
-        logging.StreamHandler()
+        logging.FileHandler("log_monitoring.log"),  # Salva os logs no arquivo
+        logging.StreamHandler()  # Exibe os logs no console
     ]
 )
+
 
 # Diretório contendo os arquivos de log
 log_directory = "/www/wwwlogs"
@@ -24,7 +25,7 @@ log_pattern = "*access_log"
 
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
-regex_bots = re.compile(r'semrush|yandex|mj12bot|babbar.tech|ahrefs.com|DataForSeoBot|SmartReader Library|ClaudeBot|DotBot|Bytespider')
+regex_bots = re.compile(r'semrush|yandex|mj12bot|babbar.tech|ahrefs.com|DataForSeoBot|SmartReader Library|ClaudeBot|DotBot|Bytespider|SeekportBot')
 regex_url = re.compile(r'//wp-admin|//wp-login.php')
 regex_wp_login = re.compile(r' /wp-login.php|GPTBot')
 regex_code_status = re.compile(r' (404|403|401|301) |POST /wp-json/litespeed/v1/cdn_status HTTP/1.1')

@@ -3,9 +3,12 @@ Description=IDS Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3.6 /home/www/scripts/ids/ids.py
+ExecStart=/usr/bin/python3.11 /home/www/scripts/ids/ids.py
+WorkingDirectory=/home/www/scripts/ids
 Restart=always
 User=root
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
