@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
 
-# Configuração do logging
+# Configuração do Logging
 logging.basicConfig(
     level=logging.INFO,  # Define o nível de log para INFO
     format='%(asctime)s - %(levelname)s - %(message)s',  # Formato da mensagem de log
