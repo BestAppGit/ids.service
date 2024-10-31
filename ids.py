@@ -131,12 +131,25 @@ def follow_log(file_path):
     try:
         with open(file_path, "r") as file:
             file.seek(0, 2)  # Vai para o final do arquivo
+            last_size = os.path.getsize(file_path)  # Armazena o tamanho inicial do arquivo
+
             while True:
+                current_size = os.path.getsize(file_path)  # Checa o tamanho atual do arquivo
+                
+                # Verifica se o arquivo foi rotacionado (tamanho reduzido)
+                if current_size < last_size:  # Essa linha verifica se o arquivo foi rotacionado
+                    logging.info("Detectada rotação de log. Reabrindo arquivo.")  # Informa que a rotação foi detectada
+                    file.close()  # Fecha o arquivo antigo
+                    file = open(file_path, "r")  # Reabre o arquivo do início
+                    last_size = current_size  # Atualiza o tamanho após reabertura
+
                 line = file.readline()
                 if not line:
                     time.sleep(0.1)
                     continue
+                
                 process_line(line)
+                last_size = current_size  # Atualiza o tamanho após leitura
     except Exception as e:
         logging.error(f"Erro ao monitorar o arquivo {file_path}: {e}")
 
