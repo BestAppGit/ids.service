@@ -26,7 +26,7 @@ def monitor_and_protect():
 
     while True:
         load_avg = get_load_average()
-        logging.info(f"Carga de 1 minuto atual: {load_avg}")
+        logging.debug(f"Carga de 1 minuto atual: {load_avg}")
 
         # Verifica se a carga está acima de 5
         if load_avg > 5:
