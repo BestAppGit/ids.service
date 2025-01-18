@@ -83,7 +83,7 @@ def reset_attempts():
 
 # Monitorar os arquivos de log
 def follow_log(file_path):
-    logging.info(f"Iniciando monitoramento do arquivo: {file_path}")
+    logging.debug(f"Iniciando monitoramento do arquivo: {file_path}")
     try:
         with open(file_path, "r") as file:
             file.seek(0, 2)
