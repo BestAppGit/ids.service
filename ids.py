@@ -20,9 +20,9 @@ log_directory, log_pattern = "/www/wwwlogs", "*access_log"
 
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
-regex_bots = re.compile(r'semrush|yandex|MJ12bot|babbar.tech|ahrefs.com|DataForSeoBot|SmartReader Library|ClaudeBot|DotBot|Bytespider|SeekportBot')
-regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/.git|/.env')
-regex_wp_login = re.compile(r' /wp-login.php|GPTBot|POST /wp-json/litespeed/v1/cdn_status HTTP/1.1|POST.* 404')
+regex_bots = re.compile(r'semrush|yandex|MJ12bot|babbar.tech|ahrefs.com|DataForSeoBot|ClaudeBot|DotBot|Bytespider|SeekportBot')
+regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/.git|/.env|/wp-login.* 404|wordpress.* 404')
+regex_wp_login = re.compile(r' /wp-login.php|GPTBot|/wp-json/litespeed/v1/cdn_status|POST.* 404|HEAD')
 regex_code_status = re.compile(r' (404|403|401|301)')
 
 # Configurações
@@ -118,6 +118,14 @@ def monitor_logs():
                     logging.info(f"Novo arquivo de log detectado: {log_file}")
                     executor.submit(follow_log, log_file)
                     monitored_files.add(log_file)
+
+# Função para reiniciar o script
+def restart_script():
+    logging.info("Reiniciando o script...")
+    os.execv(__file__, ['python'] + sys.argv)
+
+# Temporizador para reiniciar o script a cada 60 minutos
+threading.Timer(3600, restart_script).start()
 
 # Execução do script
 if __name__ == "__main__":
