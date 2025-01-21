@@ -21,7 +21,7 @@ log_directory, log_pattern = "/www/wwwlogs", "*access_log"
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
 regex_bots = re.compile(r'semrush|yandex|MJ12bot|babbar.tech|ahrefs.com|DataForSeoBot|ClaudeBot|DotBot|Bytespider|SeekportBot')
-regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/.git|/.env|/wp-login.* 404|wordpress.* 404')
+regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/\.git|/\.env|/wp-login.* 404|wordpress.* 404')
 regex_wp_login = re.compile(r' /wp-login.php|GPTBot|/wp-json/litespeed/v1/cdn_status|POST.* 404|HEAD')
 regex_code_status = re.compile(r' (404|403|401|301)')
 
