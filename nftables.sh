@@ -31,10 +31,5 @@ nft insert rule ip filter INPUT ip saddr @whitelist accept
 #nft insert rule ip6 filter INPUT ip6 saddr @whitelist accept
 
 #LIMITANDO CONEXÕES ATIVAS
-nft add rule ip filter INPUT tcp dport { 80, 443 } meter conn_meter { ip saddr ct count over 15 } reject
+nft add rule ip filter INPUT tcp dport { 80, 443 } meter conn_meter { ip saddr ct count over 10 } reject
 #nft add rule ip6 filter INPUT tcp dport { 80, 443 } meter conn_meter { ip6 saddr ct count over 20 } counter reject
-
-#LIMITANDO NOVAS CONEXÕES POR SEGUNDO
-nft add rule ip filter INPUT tcp dport {80, 443} ct state new limit rate 5/second accept
-nft add rule ip filter INPUT tcp dport { 80, 443 } ct state new reject
-#nft add rule ip6 filter INPUT tcp dport {80, 443} ct state new limit rate 2/second counter accept
