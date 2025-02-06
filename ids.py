@@ -7,6 +7,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
+import sys
 
 # Configuração do logging
 logging.basicConfig(
@@ -119,13 +120,16 @@ def monitor_logs():
                     executor.submit(follow_log, log_file)
                     monitored_files.add(log_file)
 
-# Função para reiniciar o script
-def restart_script():
-    logging.info("Reiniciando o script...")
-    os.execv(__file__, ['python'] + sys.argv)
+# Função para reiniciar o script periodicamente
+def restart_script_periodically():
+    while True:
+        time.sleep(3600)  # Aguarda 1 hora
+        logging.info("Reiniciando o script...")
+        os.execv(sys.executable, [sys.executable] + sys.argv)  # Reinicia o script corretamente
 
-# Temporizador para reiniciar o script a cada 60 minutos
-threading.Timer(3600, restart_script).start()
+# Inicia a thread de reinício periódico
+threading.Thread(target=restart_script_periodically, daemon=True).start()
+
 
 # Execução do script
 if __name__ == "__main__":
