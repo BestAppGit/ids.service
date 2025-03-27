@@ -27,7 +27,7 @@ regex_wp_login = re.compile(r' /wp-login.php|GPTBot|/wp-json/litespeed/v1/cdn_st
 regex_code_status = re.compile(r' (404|403|401|301)')
 
 # Configurações
-max_attempts_bots, max_attempts_url, max_attempts_wp_login, max_attempts_code_status = 3, 3, 10, 30
+max_attempts_bots, max_attempts_url, max_attempts_wp_login, max_attempts_code_status = 3, 3, 10, 50
 time_window_seconds = 300  # 5 minutos
 suspended_ips = set()
 attempts = defaultdict(int)
@@ -46,7 +46,7 @@ def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
 # Processar cada linha do log
 def process_line(line):
     # Ignorar linhas específicas
-    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas"]
+    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list", "/wordpress-seo-premium"]
     for pattern in ignored_patterns:
         if pattern in line:
             logging.debug(f"Linha ignorada: {pattern}")
