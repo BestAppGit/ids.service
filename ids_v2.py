@@ -21,14 +21,13 @@ log_directory, log_pattern = "/www/wwwlogs", "*access_log"
 
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
-regex_wp_login = re.compile(r'POST /wp-login.php.* 404')  # Nova regex específica para login WP
 regex_bots = re.compile(r'semrush|yandex|MJ12bot|babbar.tech|ahrefs.com|DataForSeoBot|ClaudeBot|DotBot|Bytespider|SeekportBot')
 regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/\.git|/\.env|/wp-login.* 404')
-regex_wp = re.compile(r' /wp-login.php|openai.com|/wp-json/litespeed/v1/cdn_status|POST.* 404|HEAD.* 404')
+regex_wp_login = re.compile(r' /wp-login.php|GPTBot|/wp-json/litespeed/v1/cdn_status|POST.* 404|HEAD')
 regex_code_status = re.compile(r' (404|403|401|301)')
 
 # Configurações
-max_attempts_wp_login, max_attempts_bots, max_attempts_url, max_attempts_wp,  max_attempts_code_status = 1, 3, 3, 10, 50
+max_attempts_bots, max_attempts_url, max_attempts_wp_login, max_attempts_code_status = 3, 3, 10, 50
 time_window_seconds = 300  # 5 minutos
 suspended_ips = set()
 attempts = defaultdict(int)
@@ -53,7 +52,7 @@ def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
 # --- PROCESSAMENTO DE LINHAS (AGORA CONTA POR SUBNET) ---
 def process_line(line):
     # Ignorar linhas específicas
-    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list", "/wordpress-seo-premium", "MSOffice", "Microsoft Office PowerPoint"]
+    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list", "/wordpress-seo-premium"]
     for pattern in ignored_patterns:
         if pattern in line:
             logging.debug(f"Linha ignorada: {pattern}")
@@ -67,10 +66,9 @@ def process_line(line):
 
     # Verifica padrões e incrementa contagem por subnet
     for pattern, count_limit, ban_set, description in [
-        (regex_wp_login, max_attempts_wp_login, "ids_ban", "Tentativa de login WP detectada"),  # Nova verificação
         (regex_bots, max_attempts_bots, "bots_ban", "Bot detectado"),
         (regex_url, max_attempts_url, "ids_ban", "Acesso proibido detectado"),
-        (regex_wp, max_attempts_wp, "ids_ban", "Detectado Acesso a WP"),
+        (regex_wp_login, max_attempts_wp_login, "ids_ban", "Detectado Acesso a"),
         (regex_code_status, max_attempts_code_status, "ids_ban", "Erro de status detectado"),
     ]:
         match = pattern.search(line)
