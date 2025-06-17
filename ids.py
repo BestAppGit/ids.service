@@ -13,7 +13,7 @@ import sys
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler("log_monitoring.log"), logging.StreamHandler()]
+    handlers=[logging.FileHandler("ids_monitoring.log"), logging.StreamHandler()]
 )
 
 # Diretório e padrão de log
@@ -43,7 +43,7 @@ def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
     """Bloqueia a sub-rede /24 do IP no nftables."""
     subnet_24 = get_subnet_24(ip)
     if subnet_24 not in suspended_ips:
-        logging.info(f"Suspending Subnet: {subnet_24} in {ban_set} - Regex: {trigger}")
+        logging.info(f"Suspending Subnet from IP: {ip} in {ban_set} - Regex: {trigger}")  # Agora mostra o IP
         try:
             subprocess.run(["sudo", "nft", "add", "element", "ip", "filter", ban_set, f'{{ {subnet_24} }}'], check=True)
             suspended_ips.add(subnet_24)
