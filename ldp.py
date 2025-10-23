@@ -4,10 +4,11 @@ import time
 import logging
 import subprocess
 import argparse
+import threading
 from datetime import datetime
 
 # Configurações
-SERVER_LOAD_THRESHOLD = 10.0
+SERVER_LOAD_THRESHOLD = 10
 LOAD_CHECK_INTERVAL = 1
 LOG_NORMAL_INTERVAL = 300
 LOG_HIGH_LOAD_INTERVAL = 3
@@ -17,14 +18,21 @@ WAIT_AFTER_RESTART = 30  # 30 segundos de espera após reinício
 def setup_logging(debug=False):
     """Configura o sistema de logging"""
     level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("ldp_monitoring.log"),
-            logging.StreamHandler()
-        ]
+    
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%d/%b/%Y:%H:%M:%S"
     )
+    
+    # Handlers
+    fh = logging.FileHandler("ldp_monitoring.log")
+    fh.setFormatter(formatter)
+    
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    
+    logging.basicConfig(level=level, handlers=[fh, ch])
+
 
 def parse_arguments():
     """Interpreta argumentos da linha de comando"""
@@ -54,34 +62,65 @@ def stop_web_services():
         logging.error(f"Falha ao parar serviços: {str(e)}")
         return False
 
+def save_process_snapshot(debug=False):
+    """Registra snapshot dos processos lsphp no log"""
+    try:
+        result = subprocess.run(
+            ["pgrep", "-a", "lsphp"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0 or not result.stdout.strip():
+            logging.warning("Nenhum processo lsphp encontrado")
+            return
+
+        for line in result.stdout.strip().splitlines():
+            logging.warning(f"Comando: {line}")
+
+        if debug:
+            logging.debug("Snapshot de processos lsphp registrado no log")
+
+    except Exception as e:
+        logging.error(f"Erro ao salvar snapshot: {str(e)}")
+
 def monitor_php_processes():
-    """Monitora processos lsphp até estabilização"""
+    """Monitora processos lsphp até estabilização, gerando snapshots do ps"""
     logging.info("Monitorando processos lsphp...")
-    
+
     stable_checks = 0
     while stable_checks < PROCESS_STABLE_CHECKS:
         try:
+            # Conta processos lsphp
             result = subprocess.run(
                 ["sh", "-c", "pgrep lsphp | wc -l"],
                 capture_output=True,
                 text=True
             )
             count = int(result.stdout.strip())
-            
             logging.info(f"Processos lsphp ativos: {count}")
-            
+
             if count <= 1:
                 stable_checks += 1
             else:
                 stable_checks = 0
-                
+
+            # Snapshot do pgrep
+            save_process_snapshot()
+
         except Exception as e:
             logging.error(f"Erro no monitoramento: {str(e)}")
             return False
-        
+
         time.sleep(LOG_HIGH_LOAD_INTERVAL)
-    
+
     return True
+
+def snapshot_top_loop():
+    """Gera snapshots do ps a cada 3 segundos (modo DEBUG)"""
+    while True:
+        save_process_snapshot(debug=True)
+        time.sleep(5)
 
 def restart_services():
     """Reinicia serviços web com confirmação"""
@@ -106,7 +145,7 @@ def handle_high_load():
     if restart_services():
         logging.info(f"Aguardando {WAIT_AFTER_RESTART} segundos antes de retomar monitoramento...")
         time.sleep(WAIT_AFTER_RESTART)
-        logging.info("Monitoramento reiniciado")  # Nova linha adicionada
+        logging.info("Monitoramento reiniciado")
         return True
     
     return False
@@ -116,6 +155,12 @@ def main():
     setup_logging(args.debug)
     
     logging.info("Iniciando monitoramento do servidor")
+
+    # Thread de snapshots contínuos em DEBUG
+    if args.debug:
+        t = threading.Thread(target=snapshot_top_loop, daemon=True)
+        t.start()
+
     last_log = time.time()
     
     while True:

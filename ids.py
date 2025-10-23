@@ -21,17 +21,15 @@ log_directory, log_pattern = "/www/wwwlogs", "*access_log"
 
 # Expressões regulares
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
-regex_wp_login = re.compile(r'POST /wp-login.php.* 404')  # Nova regex específica para login WP
-regex_bots = re.compile(r'semrush|yandex|MJ12bot|babbar.tech|ahrefs.com|DataForSeoBot|ClaudeBot|DotBot|Bytespider|SeekportBot')
-regex_url = re.compile(r'GET //|POST //|/wp-includes.* 404|/\.git|/\.env|/wp-login.* 404')
-regex_wp = re.compile(r' /wp-login.php|openai.com|/wp-json/litespeed/v1/cdn_status|POST.* 404|HEAD.* 404')
-regex_code_status = re.compile(r' (404|403|401|301)')
+regex_wp_login = re.compile(r'POST /wp-login.php.* 404')  # Login WP
+regex_url = re.compile(r'/wp-includes.* 404|/wp-login.* 404|/readme.txt.* 404')
+regex_wp = re.compile(r' /wp-login.php|POST.* 404|HEAD.* 404|file.* 404| /.*.php.* (301|404)')
 
 # Configurações
-max_attempts_wp_login, max_attempts_bots, max_attempts_url, max_attempts_wp,  max_attempts_code_status = 1, 3, 3, 10, 50
+max_attempts_wp_login, max_attempts_url, max_attempts_wp = 1, 3, 10
 time_window_seconds = 300  # 5 minutos
 suspended_ips = set()
-attempts = defaultdict(int)
+attempts = defaultdict(lambda: defaultdict(int))  # agora por regra + subnet
 attempts_lock = threading.Lock()
 
 # --- FUNÇÕES MODIFICADAS PARA SUBNET /24 ---
@@ -43,17 +41,17 @@ def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
     """Bloqueia a sub-rede /24 do IP no nftables."""
     subnet_24 = get_subnet_24(ip)
     if subnet_24 not in suspended_ips:
-        logging.info(f"Suspending Subnet from IP: {ip} in {ban_set} - Regex: {trigger}")  # Agora mostra o IP
+        logging.info(f"Suspending Subnet from IP: {ip} in {ban_set} - Regex: {trigger}")
         try:
             subprocess.run(["sudo", "nft", "add", "element", "ip", "filter", ban_set, f'{{ {subnet_24} }}'], check=True)
             suspended_ips.add(subnet_24)
         except subprocess.CalledProcessError as e:
             logging.error(f"Erro ao suspender Subnet {subnet_24}: {e}")
 
-# --- PROCESSAMENTO DE LINHAS (AGORA CONTA POR SUBNET) ---
+# --- PROCESSAMENTO DE LINHAS (CONTAGEM POR SUBNET E POR REGRA) ---
 def process_line(line):
-    # Ignorar linhas específicas
-    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list", "/wordpress-seo-premium", "MSOffice", "Microsoft Office PowerPoint"]
+    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list",
+                        "/wordpress-seo-premium", "MSOffice", "Microsoft Office PowerPoint", "FeedBurner"]
     for pattern in ignored_patterns:
         if pattern in line:
             logging.debug(f"Linha ignorada: {pattern}")
@@ -63,24 +61,25 @@ def process_line(line):
     if not ip_match:
         return
     ip = ip_match.group(1)
-    subnet_24 = get_subnet_24(ip)  # Obtém a sub-rede /24
+    subnet_24 = get_subnet_24(ip)
 
-    # Verifica padrões e incrementa contagem por subnet
-    for pattern, count_limit, ban_set, description in [
-        (regex_wp_login, max_attempts_wp_login, "ids_ban", "Tentativa de login WP detectada"),  # Nova verificação
-        (regex_bots, max_attempts_bots, "bots_ban", "Bot detectado"),
-        (regex_url, max_attempts_url, "ids_ban", "Acesso proibido detectado"),
-        (regex_wp, max_attempts_wp, "ids_ban", "Detectado Acesso a WP"),
-        (regex_code_status, max_attempts_code_status, "ids_ban", "Erro de status detectado"),
+    # Loop de regex agora com chave por regra
+    for pattern, count_limit, ban_set, description, key in [
+        (regex_wp_login, max_attempts_wp_login, "ids_ban", "Tentativa de login WP detectada", "wp_login"),
+        (regex_url, max_attempts_url, "ids_ban", "Acesso proibido detectado", "url"),
+        (regex_wp, max_attempts_wp, "ids_ban", "Detectado Acesso a WP", "wp"),
     ]:
         match = pattern.search(line)
         if match:
             with attempts_lock:
-                attempts[subnet_24] += 1  # Contagem por subnet
-                logging.debug(f"Subnet {subnet_24} - {description}: {match.group(0)}. Contagem: {attempts[subnet_24]}")
-                if attempts[subnet_24] >= count_limit:
+                attempts[subnet_24][key] += 1
+                logging.debug(
+                    f"Subnet {subnet_24} - {description}: {match.group(0)}. "
+                    f"Contagem {key}: {attempts[subnet_24][key]}"
+                )
+                if attempts[subnet_24][key] >= count_limit:
                     suspend_ip(ip, ban_set, description, trigger=match.group(0))
-            return
+            continue  # permite testar todas as regex na mesma linha
 
 # --- FUNÇÕES ORIGINAIS (MANTIDAS) ---
 def reset_attempts():
