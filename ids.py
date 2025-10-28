@@ -23,7 +23,7 @@ log_directory, log_pattern = "/www/wwwlogs", "*access_log"
 regex_ip = re.compile(r"^(\d+\.\d+\.\d+\.\d+)")
 regex_wp_login = re.compile(r'POST /wp-login.php.* 404')  # Login WP
 regex_url = re.compile(r'/wp-includes.* 404|/wp-login.* 404|/readme.txt.* 404')
-regex_wp = re.compile(r' /wp-login.php|POST.* 404|HEAD.* 404|file.* 404| /.*.php.* (301|404)')
+regex_wp = re.compile(r' /wp-login.php|.*//wp-login.php.*|POST.* 404|HEAD.* 404|file.* 404| /.*.php.* (301|404)')
 
 # Configurações
 max_attempts_wp_login, max_attempts_url, max_attempts_wp = 1, 3, 10
