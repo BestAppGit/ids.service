@@ -11,7 +11,7 @@ import sys
 
 # Configuração do logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler("ids_monitoring.log"), logging.StreamHandler()]
 )
@@ -32,6 +32,14 @@ suspended_ips = set()
 attempts = defaultdict(lambda: defaultdict(int))  # agora por regra + IP individual
 attempts_lock = threading.Lock()
 
+# --- CARREGAMENTO DOS PADRÕES IGNORADOS ---
+ignored_patterns_path = "ignored_patterns.txt"
+if os.path.exists(ignored_patterns_path):
+    with open(ignored_patterns_path, "r", encoding="utf-8") as f:
+        ignored_patterns = [line.strip() for line in f if line.strip()]
+else:
+    ignored_patterns = []
+
 # --- FUNÇÕES MODIFICADAS PARA IP INDIVIDUAL ---
 def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
     """Bloqueia o IP individual no nftables."""
@@ -45,8 +53,6 @@ def suspend_ip(ip, ban_set="ids_ban", regex_used="", trigger=""):
 
 # --- PROCESSAMENTO DE LINHAS (CONTAGEM POR IP INDIVIDUAL E POR REGRA) ---
 def process_line(line):
-    ignored_patterns = ["/g/collect", "/?gad_source", "/assinaturas", "woocommerce_task_list",
-                        "/wordpress-seo-premium", "MSOffice", "Microsoft Office PowerPoint", "FeedBurner"]
     for pattern in ignored_patterns:
         if pattern in line:
             logging.debug(f"Linha ignorada: {pattern}")
@@ -75,7 +81,6 @@ def process_line(line):
                     suspend_ip(ip, ban_set, description, trigger=match.group(0))
             continue  # permite testar todas as regex na mesma linha
 
-# --- FUNÇÕES ORIGINAIS (MANTIDAS) ---
 def reset_attempts():
     while True:
         time.sleep(time_window_seconds)
