@@ -11,7 +11,7 @@ import sys
 
 # Configuração do logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler("ids_monitoring.log"), logging.StreamHandler()]
 )
